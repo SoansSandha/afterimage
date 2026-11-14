@@ -2,7 +2,7 @@
 
 Afterimage is a root project for the Google Pixel 9 Pro XL. When the phone locks into the always-on display (AOD), the lock-screen wallpaper turns into a glowing line outline of itself. The idea comes from the edge/outline lock-screen transition in Samsung's Good Lock "Wonderland" module. Later scope may grow into Wonderland-style layered wallpapers and other AOD extras (`docs/plan.md` §2, §7). The app is named Afterimage, with applicationId `io.github.soanssandha.afterimage`, to be published at `github.com/SoansSandha/afterimage` (a **public** repo, not created yet).
 
-Status (2026-11-14): Phase 0a is done. The repo is public on GitHub with `main` and `develop`, Sidearm's infrastructure, the Gradle skeleton and ECC (GPL-3.0-or-later, `develop` + `main`, ECC: ADRs 0004–0006); GitHub rulesets and settings are still to do. Phase 0b is built on `feat/aod-gate-module`: the `:overlay` module, the Magisk module (`magisk/`) and `scripts/package-module.sh`. Next: the owner installs the module and runs the on-phone checks and battery run in `docs/testing.md`, which decide whether ADR 0002's route stands (`docs/plan.md` §7).
+Status (2026-11-14): Phase 0a is done. The repo is public on GitHub with `main` and `develop`, Sidearm's infrastructure, the Gradle skeleton and ECC (GPL-3.0-or-later, `develop` + `main`, ECC: ADRs 0004–0006); GitHub rulesets and settings are still to do. Phase 0b (the `:overlay` module, the Magisk module in `magisk/`, `scripts/package-module.sh`) is merged, installed on the phone and checked: the gate opens live, the stock AOD wallpaper is blurred (radius 51, a window blur) and dimmed (0.4 scrim), locking from an app is black for ~1 s only, and the owner finds the look acceptable (results in `docs/hook-targets.md` and `docs/plan.md` §4, §7). Still open: the overnight battery run, then removal and ADR 0002's status. Next: Phase 1a, the `:core` outline pipeline and a PC outline lab (`docs/plan.md` §7).
 
 ## Read first
 
@@ -52,7 +52,7 @@ Sidearm (`..\sidearm`, `github.com/SoansSandha/sidearm`) is the owner's other Ve
 ## Build
 
 - Build and verify: `./gradlew check` runs Spotless (ktlint), lint (once there are Android modules), unit tests and the Kover gate on `:core` (80 % line and branch). `./gradlew spotlessApply` fixes formatting.
-- Versions are pinned in `gradle/libs.versions.toml`, the same as Sidearm: AGP 9.5.0, Kotlin 2.4.21, Gradle 9.8.2 (wrapper checksum-pinned), compile/min/target SDK 37. AGP 9 has built-in Kotlin, so never apply `org.jetbrains.kotlin.android`. The app version is `afterimage` in the catalog.
+- Versions are pinned in `gradle/libs.versions.toml` and kept current by Dependabot (PRs into `develop`), so they can run ahead of Sidearm's: AGP 9.5.1, Kotlin 2.4.21, Gradle 9.9.0 (wrapper checksum-pinned), compile/min/target SDK 37. Dependabot titles for a single-update group exceed the 72-character limit; shorten them before squash-merging. AGP 9 has built-in Kotlin, so never apply `org.jetbrains.kotlin.android`. The app version is `afterimage` in the catalog.
 - Modules so far: `:core` (pure Kotlin) and `:overlay` (the static framework overlay, resources only). Phases add `:app` (1) and `:hook` (2); see `.claude/rules/project-structure.md`.
 - Magisk module: `./gradlew :overlay:assembleDebug`, then `bash scripts/package-module.sh --overlay overlay/build/outputs/apk/debug/overlay-debug.apk` writes `build/outputs/magisk/afterimage-v<version>.zip`. Installing, removing and recovering it, and the on-phone checks: `docs/testing.md`.
 
