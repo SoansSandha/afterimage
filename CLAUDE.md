@@ -53,7 +53,8 @@ Sidearm (`..\sidearm`, `github.com/SoansSandha/sidearm`) is the owner's other Ve
 
 - Build and verify: `./gradlew check` runs Spotless (ktlint), lint (once there are Android modules), unit tests and the Kover gate on `:core` (80 % line and branch). `./gradlew spotlessApply` fixes formatting.
 - Versions are pinned in `gradle/libs.versions.toml`, the same as Sidearm: AGP 9.5.0, Kotlin 2.4.21, Gradle 9.8.2 (wrapper checksum-pinned), compile/min/target SDK 37. AGP 9 has built-in Kotlin, so never apply `org.jetbrains.kotlin.android`. The app version is `afterimage` in the catalog.
-- Modules so far: `:core` (pure Kotlin) and `:overlay` (the static framework overlay, resources only). Phases add `:app` (1) and `:hook` (2); see `.claude/rules/project-structure.md`.
+- Modules so far: `:core` (pure Kotlin, including the outline pipeline in `core.outline`), `:overlay` (the static framework overlay, resources only) and `:lab` (the PC outline lab). Phases add `:app` (1) and `:hook` (2); see `.claude/rules/project-structure.md`.
+- Outline lab: `./gradlew :lab:run --args="<photo> --out <scratchpad dir> [--detector canny|xdog|both] [--canny-min 0.25] …"` (no args prints the options). It writes line, AOD and tinted previews plus lit share, mean brightness and timings. Photos and previews are personal: keep them in the session scratchpad, never in the repo.
 - Magisk module: `./gradlew :overlay:assembleDebug`, then `bash scripts/package-module.sh --overlay overlay/build/outputs/apk/debug/overlay-debug.apk` writes `build/outputs/magisk/afterimage-v<version>.zip`. Installing, removing and recovering it, and the on-phone checks: `docs/testing.md`.
 
 ## Dev environment and adb

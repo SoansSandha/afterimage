@@ -23,6 +23,10 @@ gradlePlugin {
             id = "afterimage.android.overlay"
             implementationClass = "io.github.soanssandha.afterimage.buildlogic.AndroidOverlayConventionPlugin"
         }
+        register("jvmTool") {
+            id = "afterimage.jvm.tool"
+            implementationClass = "io.github.soanssandha.afterimage.buildlogic.JvmToolConventionPlugin"
+        }
         register("jvmLibrary") {
             id = "afterimage.jvm.library"
             implementationClass = "io.github.soanssandha.afterimage.buildlogic.JvmLibraryConventionPlugin"
