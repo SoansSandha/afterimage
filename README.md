@@ -2,7 +2,7 @@
 
 When your Pixel locks into the always-on display, the lock-screen wallpaper fades into a glowing line outline of itself, and turns back into the photo when you wake the phone.
 
-> **Status: planning.** Nothing is built yet. Research notes and the plan are in [`docs/`](docs/plan.md).
+> **Status: early development.** No outline yet. The first piece is a Magisk module that turns on Android's own wallpaper-on-AOD path, for testing looks and battery. The plan is in [`docs/plan.md`](docs/plan.md); no release has been published.
 
 ## How it will work
 

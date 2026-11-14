@@ -1,6 +1,7 @@
-# Checks Afterimage: formatting, lint, unit tests and the coverage gate. Called by ci.yml (and, from Phase 5,
-# release.yml). Phase 1 adds the unsigned release APK as an artifact, and Phase 0b/1 the module zip. This job
-# never sees signing secrets; signing will happen in a separate job that runs no build code (Sidearm ADR 0009).
+# Checks Afterimage: formatting, lint, unit tests, the coverage gate, and that the Magisk module builds and
+# packages. Called by ci.yml (and, from Phase 5, release.yml). Phase 1 adds the unsigned app APK as an artifact.
+# This job never sees signing secrets; signing will happen in a separate job that runs no build code
+# (Sidearm ADR 0009).
 name: Build
 
 on:
@@ -61,6 +62,15 @@ jobs:
 
       - name: Check
         run: ./gradlew check --console=plain
+
+      # Checks that the overlay builds and the module packages, with the overlay verified by aapt2. The overlay is
+      # unsigned here, so the zip isn't installable and isn't uploaded.
+      - name: Build and package the Magisk module
+        run: |
+          ./gradlew :overlay:assembleRelease --console=plain
+          bash scripts/package-module.sh \
+            --overlay overlay/build/outputs/apk/release/overlay-release-unsigned.apk \
+            --out "$RUNNER_TEMP/afterimage-module.zip"
 
       - name: Upload reports
         if: failure()

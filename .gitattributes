@@ -5,6 +5,8 @@
 *.kts text eol=lf
 gradlew text eol=lf
 .githooks/* text eol=lf
+# Magisk runs these on the phone, where a CR breaks scripts and module.prop values.
+magisk/** text eol=lf
 *.bat text eol=crlf
 *.jar binary
 *.png binary
