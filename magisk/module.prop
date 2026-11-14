@@ -1,0 +1,6 @@
+id=afterimage
+name=Afterimage
+version=v@VERSION@
+versionCode=@VERSION_CODE@
+author=SoansSandha
+description=Keeps the lock-screen wallpaper visible on the always-on display (Pixel 9 Pro XL, Android 17): a framework overlay plus a Secure setting. The action button turns it off and on.

@@ -46,6 +46,13 @@ value "SystemUI int config_dozeSupportsAodWallpaperOverride" \
 value "Secure doze_always_on" "settings get secure doze_always_on"
 value "Secure doze_always_on_wallpaper_enabled" "settings get secure doze_always_on_wallpaper_enabled"
 
+section "Afterimage module"
+value "framework overlay (io.github.soanssandha.afterimage.overlay.aodgate)" \
+  "cmd overlay list android | grep -m1 afterimage || echo 'not installed'"
+echo "  Who sets config_dozeSupportsAodWallpaper (lookup --verbose):"
+adb shell "cmd overlay lookup --verbose android android:bool/config_dozeSupportsAodWallpaper" 2>&1 \
+  | tr -d '\r' | head -8 | sed 's/^/    /'
+
 section "Doze display mode"
 value "SystemUI bool doze_suspend_display_state_supported" \
   "cmd overlay lookup com.android.systemui com.android.systemui:bool/doze_suspend_display_state_supported"

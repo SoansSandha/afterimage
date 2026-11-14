@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A static resource overlay on the framework (package "android"). Static overlays apply only when the APK is on
+     the system image, which the Afterimage Magisk module arranges by mounting it under /product/overlay
+     (docs/plan.md §5.5). Android enables it at boot; it can't be turned off with `cmd overlay`, only by removing or
+     disabling the module and rebooting. The priority only matters if another overlay sets the same resource. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <overlay
+        android:isStatic="true"
+        android:priority="900"
+        android:targetPackage="android" />
+
+    <application
+        android:allowBackup="false"
+        android:hasCode="false"
+        tools:ignore="MissingApplicationIcon" />
+
+</manifest>

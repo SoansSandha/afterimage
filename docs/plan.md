@@ -1,6 +1,6 @@
 # Afterimage plan
 
-Status: Phase 0a in progress (2026-11-14). The repo infrastructure and Gradle skeleton are ported from Sidearm and `./gradlew check` passes; `git init`, the ECC submodule and the first commit wait for the owner. Decisions: GPL-3.0-or-later, ECC like Sidearm, `develop` + `main` (ADRs 0004–0006). This is the roadmap from repo setup to v1.0 and beyond. The facts behind it are in [hook-targets.md](hook-targets.md) and [research/](research/), and the decisions are in [decisions/](decisions/).
+Status (2026-11-14): Phase 0a is done: the repo is on GitHub (public), with Sidearm's infrastructure, the Gradle skeleton and ECC (ADRs 0004–0006). Phase 0b is built and waiting for the phone: the `:overlay` module, the Magisk module and `scripts/package-module.sh`; the on-phone checks are in [testing.md](testing.md). This is the roadmap from repo setup to v1.0 and beyond. The facts behind it are in [hook-targets.md](hook-targets.md) and [research/](research/), and the decisions are in [decisions/](decisions/).
 
 ## 1. Goal
 
@@ -55,7 +55,7 @@ Verified on CP4A unless marked otherwise (`hook-targets.md`).
  ┌──────────────────────────────────────┐           ┌───────────────────────────────────────┐
  │ mounts /system/app/Afterimage        │──────────►│ WallpaperManagerService               │
  │   (preinstalled → AMBIENT_WALLPAPER) │           │   binds our engine, relays ambient    │
- │ mounts /product/overlay/…AodConfig   │           │   mode to it                          │
+ │ mounts /product/overlay/…AodGate     │           │   mode to it                          │
  │   (config_dozeSupportsAodWallpaper)  │           └──────────▲──────────────────┬─────────┘
  │ service.sh: Secure setting on        │       setInAmbientMode│                  │onAmbientModeChanged
  └──────────────────────────────────────┘                      │                  ▼
@@ -125,7 +125,7 @@ service.sh           after boot: remembers the old Secure value (once), sets doz
 action.sh            Magisk's action button: turn the wallpaper on AOD off or on (works even if the app is broken)
 uninstall.sh         restores the remembered value; never touches doze_always_on (the user's AOD setting)
 system/app/Afterimage/Afterimage.apk                            priv-app only if Phase 3 needs it
-system/product/overlay/AfterimageAodConfig.apk                  static overlay on android: config_dozeSupportsAodWallpaper=true
+system/product/overlay/AfterimageAodGate.apk                    static overlay on android: config_dozeSupportsAodWallpaper=true
 system/etc/permissions/privapp-permissions-afterimage.xml       only with priv-app
 ```
 
@@ -197,7 +197,7 @@ Ported from Sidearm (`../sidearm/.claude/rules/project-structure.md`); Phase 0a 
 | `:hook` | Runs in SystemUI: entry class, `.target`, `.intercept`, `.config` | `:core`, `compileOnly` libxposed api | AndroidX, Compose, coroutines, libraries; referencing `:app` |
 | `:app` | The APK: manifest, `META-INF/xposed/*`, `.wallpaper` (service, engine), `.render` (renderer, AGSL), `.ui`, `.data`; debug tools in `src/debug` | `:core`, `:hook` as `runtimeOnly`, libxposed service, AndroidX, Compose, DataStore | Importing `:hook` classes or containing hook logic |
 | `:overlay` | The static overlay APK: manifest and resources, no code | Nothing | Code |
-| `build-logic/` | Convention plugins `afterimage.android.application`, `.android.library`, `.jvm.library` | Gradle, AGP, KGP | Product code |
+| `build-logic/` | Convention plugins `afterimage.android.application`, `.android.library`, `.android.overlay`, `.jvm.library` | Gradle, AGP, KGP | Product code |
 | `magisk/` (not a Gradle module) | Module template and shell scripts | | |
 
 - Add a module only when a real boundary needs one. The expected case is splitting `.render` out into `:render` when layered wallpapers arrive (Phase 10).
@@ -221,9 +221,11 @@ Until 1.0.0 the minor version is the phase number, as in Sidearm. Public release
 | 7–10 | Later scope | 1.x | One ADR and budget each |
 
 ### Phase 0a: repo foundation
-- Owner decisions (2026-11-14): GPL-3.0-or-later (ADR 0004), `develop` + `main` (ADR 0005), ECC like Sidearm (ADR 0006).
-- Done: `CLAUDE.md` no longer names the owner's installed apps or settings; those stay in `.claude/private/environment.md`.
-- Done in the working tree: everything below except the git steps. `scripts/dev-install.sh` waits for `:app` (Phase 1), and `release.yml` / `sign-apk.sh` for Phase 5. `:core` holds one real class, `BurnInShift` (ADR 0003), so the convention plugin, tests and Kover gate run end to end.
+Done 2026-11-14.
+- Owner decisions: GPL-3.0-or-later (ADR 0004), `develop` + `main` (ADR 0005), ECC like Sidearm (ADR 0006).
+- `CLAUDE.md` no longer names the owner's installed apps or settings; those stay in `.claude/private/environment.md`.
+- `scripts/dev-install.sh` waits for `:app` (Phase 1), and `release.yml` / `sign-apk.sh` for Phase 5. `:core` holds one real class, `BurnInShift` (ADR 0003), so the convention plugin, tests and Kover gate run end to end.
+- Lesson: files committed from Windows lose the executable bit, which broke CI (`./gradlew: Permission denied`). Add new scripts with `git add --chmod=+x`.
 - Port, renaming `sidearm` to `afterimage`:
   - `.claude/settings.json` and the full rules
   - `.claude/rules/project-structure.md` (from §6)
@@ -237,24 +239,16 @@ Until 1.0.0 the minor version is the phase number, as in Sidearm. Public release
   - the version catalog, with Sidearm's versions (AGP 9.5.0, Kotlin 2.4.21, Gradle 9.8.2, compile/min/target SDK 37)
   - the checksum-pinned wrapper, Spotless, Kover
   - `:core` with one test, so `./gradlew check` runs end to end
-- Git steps, each on the owner's explicit instruction: `git init -b main`; repo-local `user.email` (GitHub noreply) and `bash scripts/setup-repo.sh` (hooks); add the ECC submodule at `91b5f6a` and run `scripts/sync-ecc.sh`; the first commit on `main`; create `develop` from it. Creating the GitHub repo and pushing are separate instructions.
+- Git: `git init -b main`, the noreply `user.email`, hooks, the ECC submodule at `91b5f6a`, the first commit on `main` and `develop` from it; then the public repo `SoansSandha/afterimage`, with `main` and `develop` pushed. GitHub's rulesets and settings (rules §9) are still to do.
 
 ### Phase 0b: test the stock path
-- Build:
-  - `:overlay` (static overlay on `android`, `config_dozeSupportsAodWallpaper=true`)
-  - `magisk/` with `service.sh`, `uninstall.sh` and `action.sh`
-  - `scripts/package-module.sh`
-  - This module carries no app. Check that AGP builds a code-less overlay module; otherwise fall back to an `aapt2` + `apksigner` script.
+- Built (2026-11-14, branch `feat/aod-gate-module`):
+  - `:overlay`: a static overlay on `android` setting `config_dozeSupportsAodWallpaper=true` (priority 900), from a new `afterimage.android.overlay` convention plugin. AGP builds it fine once the Kotlin standard library that its built-in Kotlin adds is left out: 3 KB instead of 2.3 MB.
+  - `magisk/`: `module.prop`, `customize.sh` (Android 17 check, device warning), `service.sh` (opens the Secure gate once, remembering the old value in `/data/adb/afterimage/`, which survives module updates), `action.sh` (Magisk's action button toggles the setting), `uninstall.sh` (restores the old value once boot completes, since it runs before the settings service exists).
+  - `scripts/package-module.sh`: checks the overlay with `aapt2`, strips CRs, fills in the version, zips with the JDK's `jar`. No `META-INF` installer is needed for the Magisk app (DozeAodWallpaper's zip has none). CI builds and packages it on every run.
+  - `scripts/probe-device.sh` reports whether the overlay is enabled and who supplies the bool.
 - Already checked read-only (2026-11-14, `hook-targets.md`): the privapp allowlist is enforced; SystemUI still has the `wallpaper_dimming_scrim_array` key; the `NotificationShadeDepthController` dumpable prints `wakeAndUnlockBlurRadius`.
-- The owner installs the module from the Magisk app and reboots (a phone change: ask first). Then:
-  - `probe-device.sh` shows the gate open.
-  - Lock from the lock screen and from inside an app: how do the stock blurred, dimmed wallpaper and the full-black case look on this panel?
-  - Does Settings now show Google's "show lock screen wallpaper" AOD toggle? If so, it can be the off switch.
-  - Do Magic Portrait / Photo Shuffle appear in the picker, and how do they draw on AOD?
-  - Read the blur radius from SystemUI's dumpables during AOD (open question 1).
-  - With "Allow window-level blurs" off, are the lines sharp?
-  - Does a zeroed `wallpaper_dimming_scrim_array` remove the light-sensor dimming?
-- Battery: one unplugged evening on AOD, with no USB or wireless adb attached. Compare against the baseline in `.claude/private/environment.md`.
+- On the phone (a phone change: the owner installs it from the Magisk app): the eleven checks and the battery run in [testing.md](testing.md#phase-0b-the-stock-aod-wallpaper-path). They cover the gate, both lock paths, the blur source (open question 1), the full-black case (question 2), the dimming override (question 3), the Settings toggle (question 4), Google's ambient wallpapers, blur off, the action button and removal.
 - Exit: the owner decides whether an AOD-lit wallpaper is acceptable for battery and looks. ADR 0002 becomes Accepted, or the project switches to route 2.
 
 ### Phase 1: outline wallpaper MVP
