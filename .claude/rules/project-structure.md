@@ -7,7 +7,7 @@ These rules load in every conversation. They say where things go, so the repo st
 | Module | Arrives | Holds | May depend on | Must not |
 |---|---|---|---|---|
 | `:core` | 0a | Pure Kotlin: the config contract, the outline pipeline, the engine state machine, effect specs and timing, burn-in shift | Kotlin stdlib only | Android, Xposed, coroutines, I/O |
-| `:overlay` | 0b | The static overlay APK that opens the AOD-wallpaper gate: manifest and resources only | Nothing | Code |
+| `:overlay` | 0b | The static overlay APK that opens the AOD-wallpaper gate: manifest and resources only, built with `afterimage.android.overlay` (no Kotlin stdlib packaged) | Nothing | Code |
 | `:app` | 1 | The APK: manifest, `META-INF/xposed/*`, the wallpaper service and engine, the renderer and shaders, the settings UI, the data layer | `:core`, `:hook` as `runtimeOnly` (packaged but not importable), libxposed service, AndroidX, Compose, DataStore | Importing `:hook` classes, or containing hook logic |
 | `:hook` | 2 | Everything that runs inside SystemUI: the entry class, interceptors, SystemUI targets, the remote-config reader | `:core`, and `compileOnly` libxposed api | AndroidX, Compose, coroutines, or any library (each one gets loaded into SystemUI). Must never reference `:app` |
 | `build-logic/` | 0a | Convention plugins shared by the modules | Gradle, AGP, KGP and Kover APIs | Product code |
@@ -58,7 +58,7 @@ Debug-only developer tools, such as an adb config activity, live in `app/src/deb
 | Why a decision was made | `docs/decisions/NNNN-short-title.md`: an ADR with context, decision and consequences. To change one, write a new ADR that supersedes it; never rewrite an accepted one. |
 | Verified framework and SystemUI facts per build | `docs/hook-targets.md` |
 | Background research | `docs/research/` |
-| Device test matrix, battery protocol, post-OTA checklist | `docs/testing.md` (from Phase 1) |
+| Module install/remove/recovery, on-phone checks per phase, battery protocol, later the device matrix and post-OTA checklist | `docs/testing.md` |
 | Install, requirements, safety and recovery for users | `README.md` |
 | Our license; third-party licenses and notices | `LICENSE` (GPL-3.0-or-later); `THIRD_PARTY_NOTICES.md` |
 | Release notes | `CHANGELOG.md`, in Keep a Changelog format; each release's section becomes its GitHub Release notes |
@@ -73,7 +73,8 @@ Don't add a top-level directory without updating plan §6 and this file.
 
 ## Naming, branches and versions
 
-- Gradle modules are short lowercase words. Convention plugin ids are `afterimage.android.application`, `afterimage.android.library` and `afterimage.jvm.library`.
+- Gradle modules are short lowercase words. Convention plugin ids are `afterimage.android.application`, `afterimage.android.library`, `afterimage.android.overlay` and `afterimage.jvm.library`.
+- Scripts are staged with `git add --chmod=+x` (Windows doesn't record the executable bit). Magisk scripts in `magisk/` are POSIX `sh` (Magisk runs them with busybox `ash`) and are kept LF by `.gitattributes`.
 - Branching follows `CONTRIBUTING.md` (why: `docs/decisions/0005-branching-model.md`). In short:
   - `main` holds releases and `develop` is the integration branch. Neither takes direct commits or pushes once they exist; they change only through pull requests.
   - Topic branches come off `develop` as `<type>/<description>`, using a commit type (`feat/outline-pipeline`, `fix/12-black-frame`), and are squash-merged back. `hotfix/…` comes off `main`. `spike/…` is never merged.

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Overlay resources replace the target's resources of the same type and name. Nothing in this APK reads them. -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- The framework half of SystemUI's wallpaper-on-AOD gate: false on the Pixel 9 Pro XL, true on the Pixel 10 Pro.
+         SystemUI also needs Secure doze_always_on and doze_always_on_wallpaper_enabled set to 1
+         (docs/hook-targets.md, AOD wallpaper gates). -->
+    <bool name="config_dozeSupportsAodWallpaper" tools:ignore="UnusedResources">true</bool>
+
+</resources>

@@ -23,5 +23,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "afterimage"
 
-// Phases add :overlay (0b), :app (1) and :hook (2); docs/plan.md §6.
-include(":core")
+// Phases add :app (1) and :hook (2); docs/plan.md §6.
+include(":core", ":overlay")

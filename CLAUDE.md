@@ -2,7 +2,7 @@
 
 Afterimage is a root project for the Google Pixel 9 Pro XL. When the phone locks into the always-on display (AOD), the lock-screen wallpaper turns into a glowing line outline of itself. The idea comes from the edge/outline lock-screen transition in Samsung's Good Lock "Wonderland" module. Later scope may grow into Wonderland-style layered wallpapers and other AOD extras (`docs/plan.md` §2, §7). The app is named Afterimage, with applicationId `io.github.soanssandha.afterimage`, to be published at `github.com/SoansSandha/afterimage` (a **public** repo, not created yet).
 
-Status (2026-11-14): Phase 0a (repo foundation) is in progress. Sidearm's repo infrastructure and the Gradle skeleton (`build-logic/`, version catalog, `:core` with one tested class) are ported, and `./gradlew check` passes. The owner chose GPL-3.0-or-later, ECC like Sidearm, and `develop` + `main` (ADRs 0004–0006). **There is no git repo yet**: `git init`, the ECC submodule and the first commit wait for the owner's instruction. Next is Phase 0b: a Magisk module that switches on Google's AOD wallpaper, to test looks and battery before any app code (`docs/plan.md` §7).
+Status (2026-11-14): Phase 0a is done. The repo is public on GitHub with `main` and `develop`, Sidearm's infrastructure, the Gradle skeleton and ECC (GPL-3.0-or-later, `develop` + `main`, ECC: ADRs 0004–0006); GitHub rulesets and settings are still to do. Phase 0b is built on `feat/aod-gate-module`: the `:overlay` module, the Magisk module (`magisk/`) and `scripts/package-module.sh`. Next: the owner installs the module and runs the on-phone checks and battery run in `docs/testing.md`, which decide whether ADR 0002's route stands (`docs/plan.md` §7).
 
 ## Read first
 
@@ -53,12 +53,15 @@ Sidearm (`..\sidearm`, `github.com/SoansSandha/sidearm`) is the owner's other Ve
 
 - Build and verify: `./gradlew check` runs Spotless (ktlint), lint (once there are Android modules), unit tests and the Kover gate on `:core` (80 % line and branch). `./gradlew spotlessApply` fixes formatting.
 - Versions are pinned in `gradle/libs.versions.toml`, the same as Sidearm: AGP 9.5.0, Kotlin 2.4.21, Gradle 9.8.2 (wrapper checksum-pinned), compile/min/target SDK 37. AGP 9 has built-in Kotlin, so never apply `org.jetbrains.kotlin.android`. The app version is `afterimage` in the catalog.
-- Modules so far: `:core` (pure Kotlin). Phases add `:overlay` (0b), `:app` (1) and `:hook` (2); see `.claude/rules/project-structure.md`.
+- Modules so far: `:core` (pure Kotlin) and `:overlay` (the static framework overlay, resources only). Phases add `:app` (1) and `:hook` (2); see `.claude/rules/project-structure.md`.
+- Magisk module: `./gradlew :overlay:assembleDebug`, then `bash scripts/package-module.sh --overlay overlay/build/outputs/apk/debug/overlay-debug.apk` writes `build/outputs/magisk/afterimage-v<version>.zip`. Installing, removing and recovering it, and the on-phone checks: `docs/testing.md`.
 
 ## Dev environment and adb
 
 - Same toolchain as Sidearm: Android Studio Rabbit 2 (2026.2.2) or newer, its bundled JBR (JDK 25) as `JAVA_HOME`, SDK build-tools 36.0.0 (`dexdump`, `aapt2`).
 - On Windows, PowerShell 5.1 mangles `adb shell` commands that contain quotes or pipes, so run those from Bash. In Git Bash, prefix commands that take a device path with `MSYS_NO_PATHCONV=1`.
+- Git on Windows doesn't record the executable bit: stage new scripts with `git add --chmod=+x <file>`, or CI fails with "Permission denied" (it did once, PR #3).
+- Windows' `python` is a Store placeholder that hangs waiting for input; don't call it from scripts.
 - The dev loop doesn't assume adb root. `aflags` needs root, so read SystemUI flags and state from `dumpsys activity service com.android.systemui/.SystemUIService <Dumpable>` instead (`docs/hook-targets.md`).
 - Read-only device checks: `bash scripts/probe-device.sh` (add `--wallpapers` to also scan live wallpapers for AOD support).
 - To lock or wake the phone in tests, use `adb shell input keyevent KEYCODE_SLEEP` / `KEYCODE_WAKEUP`. **Never inject `KEYCODE_POWER` presses**: repeated power presses can trigger other power-button features, including Emergency SOS (`.claude/private/environment.md` has this phone's details).
