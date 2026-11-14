@@ -10,6 +10,7 @@ These rules load in every conversation. They say where things go, so the repo st
 | `:overlay` | 0b | The static overlay APK that opens the AOD-wallpaper gate: manifest and resources only, built with `afterimage.android.overlay` (no Kotlin stdlib packaged) | Nothing | Code |
 | `:app` | 1 | The APK: manifest, `META-INF/xposed/*`, the wallpaper service and engine, the renderer and shaders, the settings UI, the data layer | `:core`, `:hook` as `runtimeOnly` (packaged but not importable), libxposed service, AndroidX, Compose, DataStore | Importing `:hook` classes, or containing hook logic |
 | `:hook` | 2 | Everything that runs inside SystemUI: the entry class, interceptors, SystemUI targets, the remote-config reader | `:core`, and `compileOnly` libxposed api | AndroidX, Compose, coroutines, or any library (each one gets loaded into SystemUI). Must never reference `:app` |
+| `:lab` | 1a | The outline lab, a PC developer tool: runs `:core`'s outline pipeline on a photo and writes previews and stats. Built with `afterimage.jvm.tool` | `:core`, the JDK (`javax.imageio`) | Being a dependency of any module; writing anywhere but its `--out` folder (default `lab/build/outline-lab`, git-ignored) |
 | `build-logic/` | 0a | Convention plugins shared by the modules | Gradle, AGP, KGP and Kover APIs | Product code |
 | `magisk/` | 0b | The Magisk module template and its shell scripts. Not a Gradle module | | Binaries; built APKs go in only when `scripts/package-module.sh` zips them |
 
@@ -73,7 +74,7 @@ Don't add a top-level directory without updating plan §6 and this file.
 
 ## Naming, branches and versions
 
-- Gradle modules are short lowercase words. Convention plugin ids are `afterimage.android.application`, `afterimage.android.library`, `afterimage.android.overlay` and `afterimage.jvm.library`.
+- Gradle modules are short lowercase words. Convention plugin ids are `afterimage.android.application`, `afterimage.android.library`, `afterimage.android.overlay`, `afterimage.jvm.library` and `afterimage.jvm.tool`.
 - Scripts are staged with `git add --chmod=+x` (Windows doesn't record the executable bit). Magisk scripts in `magisk/` are POSIX `sh` (Magisk runs them with busybox `ash`) and are kept LF by `.gitattributes`.
 - Branching follows `CONTRIBUTING.md` (why: `docs/decisions/0005-branching-model.md`). In short:
   - `main` holds releases and `develop` is the integration branch. Neither takes direct commits or pushes once they exist; they change only through pull requests.

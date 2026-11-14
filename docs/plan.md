@@ -197,7 +197,8 @@ Ported from Sidearm (`../sidearm/.claude/rules/project-structure.md`); Phase 0a 
 | `:hook` | Runs in SystemUI: entry class, `.target`, `.intercept`, `.config` | `:core`, `compileOnly` libxposed api | AndroidX, Compose, coroutines, libraries; referencing `:app` |
 | `:app` | The APK: manifest, `META-INF/xposed/*`, `.wallpaper` (service, engine), `.render` (renderer, AGSL), `.ui`, `.data`; debug tools in `src/debug` | `:core`, `:hook` as `runtimeOnly`, libxposed service, AndroidX, Compose, DataStore | Importing `:hook` classes or containing hook logic |
 | `:overlay` | The static overlay APK: manifest and resources, no code | Nothing | Code |
-| `build-logic/` | Convention plugins `afterimage.android.application`, `.android.library`, `.android.overlay`, `.jvm.library` | Gradle, AGP, KGP | Product code |
+| `:lab` | The outline lab: runs `:core`'s pipeline on a photo on the PC and writes previews (a developer tool, never packaged) | `:core`, the JDK's `javax.imageio` | Being a dependency of any other module |
+| `build-logic/` | Convention plugins `afterimage.android.application`, `.android.library`, `.android.overlay`, `.jvm.library`, `.jvm.tool` | Gradle, AGP, KGP | Product code |
 | `magisk/` (not a Gradle module) | Module template and shell scripts | | |
 
 - Add a module only when a real boundary needs one. The expected case is splitting `.render` out into `:render` when layered wallpapers arrive (Phase 10).
@@ -256,6 +257,9 @@ Done 2026-11-14.
 - **1a, `:core`:**
   - The outline pipeline (XDoG and Canny, clean-up, distance transform, reveal order), the engine state machine, burn-in shift and the config codec, fully unit-tested.
   - An "outline lab": a JVM command run through Gradle that takes an image path and writes the outline to a scratch folder, for tuning on the PC. Photos and outputs never enter the repo.
+  - Built so far (2026-11-14, `feat/outline-pipeline`): the pipeline in `core.outline` (`GrayImage`, `GaussianBlur`, `EdgeDetector.Canny`/`.Xdog`, `ComponentFilter`, `DistanceTransform`, `OutlineShading`/`OutlineStyle`, `OutlineField`, `OutlinePipeline`; 39 tests, line coverage 100 %) and the `:lab` module (`./gradlew :lab:run --args="<photo> …"`). The lab computes the outline at the 1536 px working size and draws previews at 2992 px by sampling the distance field up, as the phone will.
+  - First lab results on a dark, shallow-focus photo (4000×6000): Canny outlines each leaflet but also traces out-of-focus background (24 % lit with the first defaults); XDoG keeps only the sharp subject but strokes the gaps between leaflets rather than their outlines (4 % lit). Canny with `minMagnitude` 0.25 keeps the sharp subject's outlines and drops most of the background (9.5 % lit, within §5.8's 15 %); it's now the default. Detect + clean-up + distances take about 0.35 s on the PC.
+  - Still to do in 1a: reveal order (for line trace, Phase 3), the engine state machine and the config codec. They can also land with 1b.
 - **1b, engine and a minimal app:**
   - The ambient service and component sync, the render thread, the Fade effect, burn-in, `onComputeColors`, and the display-state fallback.
   - One screen: pick a photo with the system Photo Picker (no storage permission), compute the outline, and set the wallpaper through `ACTION_CHANGE_LIVE_WALLPAPER`.

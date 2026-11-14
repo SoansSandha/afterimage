@@ -23,5 +23,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "afterimage"
 
-// Phases add :app (1) and :hook (2); docs/plan.md §6.
-include(":core", ":overlay")
+// Phases add :app (1) and :hook (2); docs/plan.md §6. :lab is a PC-only developer tool.
+include(":core", ":overlay", ":lab")
