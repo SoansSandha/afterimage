@@ -64,6 +64,12 @@ Then the battery run below, with the gate open and the usual wallpaper.
 
 Exit: the owner decides whether a lit AOD wallpaper is worth it, for looks and battery. Record the decision in ADR 0002 (Accepted, or switch to route 2).
 
+## Measuring an AOD frame
+
+`adb exec-out screencap -p > frame.png` works while the phone is dozing and returns the frame SystemUI composites, which is what the panel shows, though not how bright the panel is. Compare frames numerically rather than by eye: mean luma over the wallpaper area (how dim) and mean absolute difference between neighbouring pixels, "edge energy" (how sharp). In Phase 0b these showed the 0.4 scrim (60 % of the lock screen's luma) and the blur (8 % of its edge energy). For transitions, capture back to back after `KEYCODE_SLEEP` and note the time of each capture; one capture takes roughly 0.5–1.5 s.
+
+Captures show the owner's wallpaper, status bar and notifications: keep them in the session scratchpad and never commit or attach them (rules §3).
+
 ## Battery on AOD
 
 Use the same method as the baseline, so the numbers compare:

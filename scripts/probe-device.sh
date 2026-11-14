@@ -50,8 +50,9 @@ section "Afterimage module"
 value "framework overlay (io.github.soanssandha.afterimage.overlay.aodgate)" \
   "cmd overlay list android | grep -m1 afterimage || echo 'not installed'"
 echo "  Who sets config_dozeSupportsAodWallpaper (lookup --verbose):"
+# The "For config" line lists the phone's MCC/MNC (carrier and region), so it's dropped.
 adb shell "cmd overlay lookup --verbose android android:bool/config_dozeSupportsAodWallpaper" 2>&1 \
-  | tr -d '\r' | head -8 | sed 's/^/    /'
+  | tr -d '\r' | grep -v 'For config' | head -8 | sed 's/^/    /'
 
 section "Doze display mode"
 value "SystemUI bool doze_suspend_display_state_supported" \

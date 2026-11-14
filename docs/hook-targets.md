@@ -78,6 +78,22 @@ The live value can be read without root: `adb shell "dumpsys activity service co
 
 Present: `doze.util.BurnInHelperKt`, `keyguard.domain.interactor.BurnInInteractor`, `keyguard.ui.viewmodel.AodBurnInViewModel`, `statusbar.LightRevealScrim`, `statusbar.LightRevealEffect`, `wallpapers.domain.interactor.WallpaperFocalAreaInteractor`.
 
+### With the AOD-wallpaper gate open (Phase 0b, 2026-11-14)
+
+Observed with the Phase 0b module installed (static overlay + Secure setting) and a static `ImageWallpaper`. Frames were captured with `adb exec-out screencap -p` while dozing (it returns SystemUI's composited frame, not panel brightness) and compared by mean luma and edge energy over the wallpaper area. Captures stay outside the repo.
+
+| What | Result |
+|---|---|
+| Gate | The overlay makes `config_dozeSupportsAodWallpaper` resolve to `true`. Before it, the `false` came from `framework-res.apk` itself, not a Google overlay. Changing Secure `doze_always_on_wallpaper_enabled` applies live in both directions: no reboot or SystemUI restart |
+| Settings switch | With the framework bool `true`, Settings shows Google's "Show lock screen wallpaper" switch for the always-on display, driving the same Secure setting |
+| Lock screen → AOD | The wallpaper stays visible, blurred and dimmed; the frame settles within 1 s and holds |
+| Dimming | The AOD frame keeps 60 % of the lock screen's luma on a dark wallpaper: `LightRevealScrimInteractor`'s 0.4 scrim |
+| Light-sensor dimming | None on this device: `DozeScreenBrightness` dumps `sensorToWallpaperScrimOpacity=[-1, 0, 0, 0, 0]` (`dumpsys activity service com.android.systemui/.doze.DozeService`), so overriding `wallpaper_dimming_scrim_array` changes nothing |
+| Blur | `NotificationShadeDepthController` reports `wakeAndUnlockBlurRadius: 51.0` while dozing (0 when the gate is closed), while its `lastAppliedBlur` stays 0. The visible blur is a window-level blur: with Global `disable_window_blurs=1` the AOD frame is as sharp as the lock screen. Edge energy is 8 % of the lock screen's with the blur, and 63 % without it, about what the 0.4 scrim alone leaves (60 %). Phase 2 still has to find where the radius is applied in scene-container mode (`WindowRootViewBlurInteractor`, `BlurChoreographer`) |
+| From an app (GONE → AOD) | Full black (luma 0.1) at about 0.7 s, then the same frame as from the lock screen by 1.7 s, held to at least 16 s. The 1.0 scrim covers only the transition |
+| Secure setting 0 (gate half-closed) | AOD is black again and the blur radius drops to 0 |
+| Google's ambient wallpapers | `com.google.android.apps.magicportrait/.service.MagicPortraitWallpaperService` and `.service.PhotoShuffleWallpaperService` are present; Photo Shuffle's preview didn't load without setup, so how they draw on AOD wasn't checked |
+
 ### Permissions
 
 | Permission | Protection level | Consequence |
