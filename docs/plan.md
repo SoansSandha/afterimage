@@ -1,6 +1,6 @@
 # Afterimage plan
 
-Status (2026-11-14): Phase 0a is done: the repo is on GitHub (public), with Sidearm's infrastructure, the Gradle skeleton and ECC (ADRs 0004–0006). Phase 0b is built and waiting for the phone: the `:overlay` module, the Magisk module and `scripts/package-module.sh`; the on-phone checks are in [testing.md](testing.md). This is the roadmap from repo setup to v1.0 and beyond. The facts behind it are in [hook-targets.md](hook-targets.md) and [research/](research/), and the decisions are in [decisions/](decisions/).
+Status (2026-11-14): Phase 0a is done: the repo is on GitHub (public), with Sidearm's infrastructure, the Gradle skeleton and ECC (ADRs 0004–0006). Phase 0b's module is merged and installed on the phone, and its checks are done except the overnight battery run and removal; the owner judged the stock lit wallpaper acceptable as a base for the outline. Results are in [hook-targets.md](hook-targets.md) and §4. Phase 1a (the outline pipeline, PC only) starts alongside. This is the roadmap from repo setup to v1.0 and beyond. The facts behind it are in [hook-targets.md](hook-targets.md) and [research/](research/), and the decisions are in [decisions/](decisions/).
 
 ## 1. Goal
 
@@ -37,9 +37,9 @@ Verified on CP4A unless marked otherwise (`hook-targets.md`).
 - **Gates.** SystemUI only shows the wallpaper on AOD when Secure `doze_always_on`=1, Secure `doze_always_on_wallpaper_enabled`=1 and the config allows it (SystemUI's `config_dozeSupportsAodWallpaperOverride`, -1 = defer to the framework's `config_dozeSupportsAodWallpaper`, which is false on the 9 Pro XL). Google enables it only on the Pixel 10 Pro / 10 Pro XL.
 - **Permission.** An ambient wallpaper needs `AMBIENT_WALLPAPER` (`signature|preinstalled`), checked when system_server binds it. A `/system/app` copy is enough; priv-app isn't needed for this. On an Android 17 emulator, DepthWall confirmed that a same-key APK installed over the system copy becomes an `UPDATED_SYSTEM_APP` and keeps the permission and its data (`research/pixel-prior-art.md` §2).
 - **Hidden callback.** `onAmbientModeChanged(boolean, long)` is `@SystemApi` and missing from the SDK stubs. Declared without `override` it is still dispatched by ART, and it reaches an R8 build if a keep rule protects it (DepthWall, emulator).
-- **Dimming.** With the gate on, SystemUI puts a black scrim over the wallpaper on AOD: 0.4 alpha (0.64 for wallpapers with dark-text hints), and 1.0 for transitions that start from GONE or OCCLUDED (locking from inside an app). Light-sensor dimming adds to it (`setAodWallpaperDimmingScrim`). Global `always_on_display_constants` has a `wallpaper_dimming_scrim_array` key that DozeAodWallpaper zeroes on Android 17 (Pixel 8 Pro). CP4A's SystemUI still contains it (`AlwaysOnDisplayPolicy`); whether zeroing it works is tested in Phase 0b.
-- **Blur.** With the gate on, SystemUI blurs the wallpaper as AOD comes in: `wakeAndUnlockBlurRadius = lerp(minBlur, maxBlur/2, dozeAmount)` (radius 44 on DepthWall's emulator). That smears thin lines. The developer option "Allow window-level blurs" (Global `disable_window_blurs`) turns off every SystemUI blur, which is a way to see sharp lines while testing before the hook exists.
-- **Turning the gate on affects every wallpaper.** Other wallpapers get Google's blurred, dimmed AOD look. Acceptable, but the module needs an easy off switch.
+- **Dimming.** With the gate on, SystemUI puts a black scrim over the wallpaper on AOD: 0.4 alpha (0.64 for wallpapers with dark-text hints), measured on the phone as 60 % of the lock screen's luma. Locking from inside an app (GONE or OCCLUDED → AOD) shows full black for about 1 s, during the transition only; then the same 0.4. Light-sensor dimming (`setAodWallpaperDimmingScrim`) is zero at every light level on the 9 Pro XL, so `always_on_display_constants` / `wallpaper_dimming_scrim_array` needs no override (Phase 0b, `hook-targets.md`).
+- **Blur.** With the gate on, SystemUI blurs the wallpaper as AOD comes in: `wakeAndUnlockBlurRadius = lerp(minBlur, maxBlur/2, dozeAmount)`, 51 on the phone, which leaves 8 % of the edge detail; thin lines wouldn't survive it. It's a window-level blur: the developer option "Allow window-level blurs" (Global `disable_window_blurs`) removes it completely, a no-hook way to see sharp lines while testing before the hook exists.
+- **Turning the gate on affects every wallpaper.** Other wallpapers get Google's blurred, dimmed AOD look. Acceptable: Settings shows Google's own "Show lock screen wallpaper" switch once the framework bool is true, and the module's action button flips the same setting live.
 - **Power.** On this panel `doze_suspend_display_state_supported` is false, so AOD runs in `Display.STATE_DOZE`, not `STATE_DOZE_SUSPEND`: frames drawn during AOD do reach the screen. The CPU still sleeps between SystemUI's once-a-minute redraws, and anything that animates keeps it awake. Budget: a transition of a few seconds on entry/exit, then one still frame (ADR 0003).
 - **Burn-in.** A static outline held for hours is the main risk. SystemUI shifts its own AOD content (`BurnInHelper`), but not the wallpaper.
 - **Hooks in SystemUI.** libxposed API 102 calls `onPackageLoaded` and then `onPackageReady(PackageReadyParam)` for each scoped app; `onPackageReady` carries the app's class loader, after its `AppComponentFactory`. SystemUI class names aren't obfuscated on CP4A.
@@ -250,6 +250,7 @@ Done 2026-11-14.
   - `scripts/probe-device.sh` reports whether the overlay is enabled and who supplies the bool.
 - Already checked read-only (2026-11-14, `hook-targets.md`): the privapp allowlist is enforced; SystemUI still has the `wallpaper_dimming_scrim_array` key; the `NotificationShadeDepthController` dumpable prints `wakeAndUnlockBlurRadius`.
 - On the phone (a phone change: the owner installs it from the Magisk app): the eleven checks and the battery run in [testing.md](testing.md#phase-0b-the-stock-aod-wallpaper-path). They cover the gate, both lock paths, the blur source (open question 1), the full-black case (question 2), the dimming override (question 3), the Settings toggle (question 4), Google's ambient wallpapers, blur off, the action button and removal.
+- Results (2026-11-14): checks 1–4, 6 and 8–10 done, with the findings in §4 and `hook-targets.md`. Check 5 only by `KEYCODE_WAKEUP`. Check 7 skipped: Photo Shuffle's preview didn't load without setup, and question 6 moves to Phase 1. The owner judged the stock blurred wallpaper on AOD acceptable as a base. Still open: the overnight battery run, then removal (check 11), then ADR 0002's status.
 - Exit: the owner decides whether an AOD-lit wallpaper is acceptable for battery and looks. ADR 0002 becomes Accepted, or the project switches to route 2.
 
 ### Phase 1: outline wallpaper MVP
@@ -374,15 +375,15 @@ Details move into `docs/testing.md` in Phase 1.
 
 ## 11. Open questions
 
-| # | Question | Answered in |
-|---|---|---|
-| 1 | Does the scene-container lock screen still blur through `NotificationShadeDepthController`, or does `WindowRootViewBlurInteractor` own AOD blur now? | 0b |
-| 2 | After locking from an app, does the scrim stay at 1.0 for the whole AOD session or only during the transition? | 0b |
-| 3 | Does zeroing `wallpaper_dimming_scrim_array` remove the light-sensor dimming? (The key exists on CP4A; the allowlist is enforced.) | 0b |
-| 4 | Does Settings show Google's AOD-wallpaper toggle once the framework bool is true? | 0b |
-| 5 | When does `setInAmbientMode(true)` arrive relative to the panel entering DOZE, and what `animationDuration` comes with it? | 1 |
-| 6 | Can a live wallpaper be set for the lock screen only through the Pixel picker, or does it need `SET_WALLPAPER_COMPONENT`? | 3 |
-| 7 | Does Vector hot-reload modules inside SystemUI? | 2 |
-| 8 | Overlay gate or a SystemUI-side scoped gate? | 2 |
-| 9 | One APK or two? (Plan: one.) | 1 |
-| 10 | License, ECC, branch model | 0a |
+| # | Question | Answered in | Answer |
+|---|---|---|---|
+| 1 | Does the scene-container lock screen still blur through `NotificationShadeDepthController`, or does `WindowRootViewBlurInteractor` own AOD blur now? | 0b, partly | The controller still computes `wakeAndUnlockBlurRadius` (51), and the blur is a window-level blur. Which class applies it in scene-container mode is left for Phase 2 |
+| 2 | After locking from an app, does the scrim stay at 1.0 for the whole AOD session or only during the transition? | 0b | Only the transition, about 1 s |
+| 3 | Does zeroing `wallpaper_dimming_scrim_array` remove the light-sensor dimming? | 0b | Nothing to remove: it's already zero at every light level on this phone |
+| 4 | Does Settings show Google's AOD-wallpaper toggle once the framework bool is true? | 0b | Yes, "Show lock screen wallpaper" |
+| 5 | When does `setInAmbientMode(true)` arrive relative to the panel entering DOZE, and what `animationDuration` comes with it? | 1 | |
+| 6 | Can a live wallpaper be set for the lock screen only through the Pixel picker, or does it need `SET_WALLPAPER_COMPONENT`? | 1 (with our own wallpaper; Photo Shuffle's preview didn't load in 0b) | |
+| 7 | Does Vector hot-reload modules inside SystemUI? | 2 | |
+| 8 | Overlay gate or a SystemUI-side scoped gate? | 2 | |
+| 9 | One APK or two? (Plan: one.) | 1 | |
+| 10 | License, ECC, branch model | 0a | GPL-3.0-or-later, ECC like Sidearm, `develop` + `main` (ADRs 0004–0006) |
