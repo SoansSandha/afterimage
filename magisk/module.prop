@@ -3,4 +3,4 @@ name=Afterimage
 version=v@VERSION@
 versionCode=@VERSION_CODE@
 author=SoansSandha
-description=Keeps the lock-screen wallpaper visible on the always-on display (Pixel 9 Pro XL, Android 17): a framework overlay plus a Secure setting. The action button turns it off and on.
+description=Your lock-screen photo turns into a glowing outline on the always-on display (Pixel 9 Pro XL, Android 17). Installs the Afterimage app as a system app and opens Android's wallpaper-on-AOD path. The action button turns the wallpaper on AOD off and on.

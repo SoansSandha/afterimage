@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Afterimage</string>
+    <string name="wallpaper_label">Afterimage</string>
+    <string name="wallpaper_description">Your photo on the lock screen; a glowing outline of it on the always-on display.</string>
+
+    <string name="status_title">Status</string>
+    <string name="status_system_app_ok">Installed as a system app: allowed on the always-on display</string>
+    <string name="status_system_app_missing">Not a system app yet. Install the Afterimage Magisk module and reboot.</string>
+    <string name="status_photo_ready">Outline ready: %1$d%% of the screen lit</string>
+    <string name="status_photo_missing">No photo chosen yet</string>
+
+    <string name="action_choose_photo">Choose photo</string>
+    <string name="action_set_wallpaper">Set as wallpaper</string>
+    <string name="working">Finding the outline…</string>
+    <string name="preview_title">Preview</string>
+    <string name="preview_progress">Photo ↔ outline</string>
+    <string name="error_photo">Couldn\'t use that photo: %1$s</string>
+    <string name="error_no_picker">No live-wallpaper picker found</string>
+</resources>

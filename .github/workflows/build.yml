@@ -63,13 +63,14 @@ jobs:
       - name: Check
         run: ./gradlew check --console=plain
 
-      # Checks that the overlay builds and the module packages, with the overlay verified by aapt2. The overlay is
-      # unsigned here, so the zip isn't installable and isn't uploaded.
+      # Checks that the app (R8-shrunk) and the overlay build and that the module packages, both APKs verified by
+      # aapt2. They're unsigned here, so the zip isn't installable and isn't uploaded.
       - name: Build and package the Magisk module
         run: |
-          ./gradlew :overlay:assembleRelease --console=plain
+          ./gradlew :app:assembleRelease :overlay:assembleRelease --console=plain
           bash scripts/package-module.sh \
             --overlay overlay/build/outputs/apk/release/overlay-release-unsigned.apk \
+            --app app/build/outputs/apk/release/app-release-unsigned.apk \
             --out "$RUNNER_TEMP/afterimage-module.zip"
 
       - name: Upload reports

@@ -259,10 +259,16 @@ Done 2026-11-14.
   - An "outline lab": a JVM command run through Gradle that takes an image path and writes the outline to a scratch folder, for tuning on the PC. Photos and outputs never enter the repo.
   - Built so far (2026-11-14, `feat/outline-pipeline`): the pipeline in `core.outline` (`GrayImage`, `GaussianBlur`, `EdgeDetector.Canny`/`.Xdog`, `ComponentFilter`, `DistanceTransform`, `OutlineShading`/`OutlineStyle`, `OutlineField`, `OutlinePipeline`; 39 tests, line coverage 100 %) and the `:lab` module (`./gradlew :lab:run --args="<photo> …"`). The lab computes the outline at the 1536 px working size and draws previews at 2992 px by sampling the distance field up, as the phone will.
   - First lab results on a dark, shallow-focus photo (4000×6000): Canny outlines each leaflet but also traces out-of-focus background (24 % lit with the first defaults); XDoG keeps only the sharp subject but strokes the gaps between leaflets rather than their outlines (4 % lit). Canny with `minMagnitude` 0.25 keeps the sharp subject's outlines and drops most of the background (9.5 % lit, within §5.8's 15 %); it's now the default. Detect + clean-up + distances take about 0.35 s on the PC.
-  - Still to do in 1a: reveal order (for line trace, Phase 3), the engine state machine and the config codec. They can also land with 1b.
+  - Moved to later: reveal order (Phase 3, line trace) and the config codec (Phase 3, with the settings). The engine state machine landed with 1b as `AmbientTimeline`.
 - **1b, engine and a minimal app:**
   - The ambient service and component sync, the render thread, the Fade effect, burn-in, `onComputeColors`, and the display-state fallback.
   - One screen: pick a photo with the system Photo Picker (no storage permission), compute the outline, and set the wallpaper through `ACTION_CHANGE_LIVE_WALLPAPER`.
+  - Built (2026-11-14, `feat/wallpaper-engine`), checked on the PC, not yet on the phone:
+    - `:core`: `engine.AmbientTimeline` (progress, reversal mid-way, SystemUI's exit duration, AOD entry count) and `Easing`; `outline.FieldCodec` / `PackedField` (one byte per pixel, a versioned cache format). 53 tests.
+    - `:app`: `wallpaper.OutlineWallpaperService` (ships disabled; `AmbientComponent` enables it when `AMBIENT_WALLPAPER` is granted; one render thread with `Choreographer`; the hidden callback without `override`, kept by R8 and confirmed in the release dex; a display-state fallback; timing logs under `Afterimage`), `render.OutlineRenderer` (one AGSL shader: photo fading out, outline in the photo's colours fading in, the distance field filtered and scaled on the GPU), `data.OutlineMaker` / `WallpaperStore` (photo cropped to the screen, outline at 1536 px, JPEG + packed field in private storage), and one Compose screen with a preview slider.
+    - The APK requests `AMBIENT_WALLPAPER` and nothing else of note (no `INTERNET`); the `<wallpaper>` XML carries `supportsAmbientMode=true` (attribute `0x0101058d`) in debug and release builds.
+    - The module carries the app in `/system/app/Afterimage`; `scripts/dev-install.sh` updates it afterwards; CI builds and packages both.
+    - Not done here: the config codec (Phase 3, with the settings) and reveal order (Phase 3, line trace).
 - **1c, on the phone:**
   - The module now carries the APK in `/system/app`. After that, iterate with `scripts/dev-install.sh`.
   - Log under the tag `Afterimage`: timestamps of the ambient callbacks, display-state changes and frames drawn. This measures the real entry window.

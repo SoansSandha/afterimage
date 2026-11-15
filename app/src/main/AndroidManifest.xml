@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- signature|preinstalled: granted only to the copy the Magisk module puts on the system image. Without it,
+         system_server refuses to bind a wallpaper that declares supportsAmbientMode (docs/plan.md §4, §5.2). -->
+    <uses-permission
+        android:name="android.permission.AMBIENT_WALLPAPER"
+        tools:ignore="ProtectedPermissions" />
+
+    <uses-feature
+        android:name="android.software.live_wallpaper"
+        android:required="true" />
+
+    <!-- No INTERNET permission: photos and outlines never leave the phone (docs/plan.md §5.7). -->
+    <application
+        android:name=".AfterimageApp"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Afterimage">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Disabled until AMBIENT_WALLPAPER is granted (AmbientComponent), so a plain install never offers a
+             wallpaper that system_server would refuse to bind. -->
+        <service
+            android:name=".wallpaper.OutlineWallpaperService"
+            android:enabled="false"
+            android:exported="true"
+            android:label="@string/wallpaper_label"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/outline_wallpaper" />
+        </service>
+
+        <!-- AndroidX's profile installer adds this receiver only so adb and the Play Store can push performance
+             profiles; nothing else should reach the app. The library is only on the runtime classpath. -->
+        <receiver
+            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+            tools:ignore="MissingClass"
+            tools:node="remove" />
+    </application>
+
+</manifest>
