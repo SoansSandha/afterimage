@@ -12,7 +12,7 @@ sealed interface EdgeDetector {
      *
      * Gradients depend on scale, so these defaults assume the 1536 px working size. [minMagnitude] = 0.25 came from
      * the outline lab on a dark, shallow-focus photo: it keeps the sharp subject and drops soft, out-of-focus edges,
-     * lighting about 10 % of the screen (0.08 lit 24 %). Phase 3's "detail" setting will expose it.
+     * lighting about 10 % of the screen (0.08 lit 24 %). The app's Detail slider moves it, through [OutlineDetail].
      */
     data class Canny(
         val sigma: Float = 1.4f,

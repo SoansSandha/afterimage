@@ -163,7 +163,7 @@ class OutlineWallpaperService : WallpaperService() {
             val photo = store.loadPhoto()
             val field = store.loadField()
             if (photo != null && field != null) {
-                renderer = OutlineRenderer(photo, field)
+                renderer = OutlineRenderer(photo, field, store.loadLook().lineColor)
                 colors = WallpaperColors.fromBitmap(photo)
                 mainHandler.post { notifyColorsChanged() }
             } else {

@@ -75,14 +75,15 @@ Install the module built with the app (above), replacing the Phase 0b one, and r
 | # | Check | How | What to record |
 |---|---|---|---|
 | 1 | System app | `adb shell dumpsys package io.github.soanssandha.afterimage \| grep -E 'codePath\|AMBIENT_WALLPAPER'` | `codePath=/system/app/Afterimage` and `AMBIENT_WALLPAPER: granted=true`. The app's status card says "Installed as a system app" |
-| 2 | Make an outline | Open Afterimage › Choose photo › pick one. Watch `adb logcat -s Afterimage` | "Outline made: …" with the lit share and times (budget: lit ≤ 15 %, ≤ 1.5 s) |
-| 3 | Preview | Drag the slider in the app | Photo → outline looks right; lines follow the photo's colours |
-| 4 | Set it (open question 6) | Set as wallpaper › Pixel's preview › Set wallpaper | Which destinations it offers: is "Lock screen" alone one of them? |
-| 5 | Lock from the lock screen | `KEYCODE_SLEEP` from the lock screen, watching the phone and `adb logcat -s Afterimage` | The photo fades to the outline. Log: `onAmbientModeChanged` time and duration, display state changes, "Settled … frames in … ms" (open question 5: does the transition finish before the display state turns `DOZE`?) |
-| 6 | AOD frame | `adb exec-out screencap -p` while on AOD (see below) | Outline visible, dimmed by the 0.4 scrim and blurred by SystemUI (Phase 2 removes both) |
-| 7 | Lock from an app, wake, fingerprint | As in Phase 0b | Black for ~1 s from an app, then the outline; on wake the outline fades back to the photo |
-| 8 | Burn-in shift | Lock several times; compare AOD frames | The outline moves a few pixels each time |
-| 9 | Battery | The battery run below, with Afterimage as the lock wallpaper | mAh/h on AOD against the baseline |
+| 2 | Make an outline | Open Afterimage › Choose photo › pick one. Watch `adb logcat -s Afterimage` | "Photo prepared: … ms" and "Outline made: …" with the lit share and time (budget: lit ≤ 15 %, ≤ 1.5 s together). The status says the preview isn't applied, and the wallpaper hasn't changed |
+| 3 | Preview | Drag the Photo ↔ outline slider | Photo → outline looks right; lines follow the photo's colours |
+| 4 | Detail and line colour | Drag Detail to each end and let go; flip Coloured lines off and on | Fewer lines keeps only strong edges; more lines adds soft ones. Each change logs "Outline made" without a new "Photo prepared" (well under a second). The switch turns the lines white and back at once. The wallpaper still hasn't changed |
+| 5 | Set it (open question 6) | Set as wallpaper › Pixel's preview › Set wallpaper | Which destinations it offers: is "Lock screen" alone one of them? Once Afterimage is on the lock screen, Set as wallpaper applies a new preview directly ("Wallpaper updated"), without the picker |
+| 6 | Lock from the lock screen | `KEYCODE_SLEEP` from the lock screen, watching the phone and `adb logcat -s Afterimage` | The photo fades to the outline. Log: `onAmbientModeChanged` time and duration, display state changes, "Settled … frames in … ms" (open question 5: does the transition finish before the display state turns `DOZE`?) |
+| 7 | AOD frame | `adb exec-out screencap -p` while on AOD (see below) | Outline visible, dimmed by the 0.4 scrim and blurred by SystemUI (Phase 2 removes both) |
+| 8 | Lock from an app, wake, fingerprint | As in Phase 0b | Black for ~1 s from an app, then the outline; on wake the outline fades back to the photo |
+| 9 | Burn-in shift | Lock several times; compare AOD frames | The outline moves a few pixels each time |
+| 10 | Battery | The battery run below, with Afterimage as the lock wallpaper | mAh/h on AOD against the baseline |
 
 Iterate on app code with `bash scripts/dev-install.sh`: it installs over the system copy, keeping the permission, with no reboot. Reopen the app afterwards so it re-enables the wallpaper service if needed.
 

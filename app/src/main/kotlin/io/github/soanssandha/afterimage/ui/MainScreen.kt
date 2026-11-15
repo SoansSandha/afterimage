@@ -19,6 +19,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,11 +36,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.soanssandha.afterimage.R
 import io.github.soanssandha.afterimage.core.burnin.Offset
+import io.github.soanssandha.afterimage.core.config.LineColor
 import io.github.soanssandha.afterimage.render.OutlineRenderer
+import io.github.soanssandha.afterimage.ui.MainUiState.Work
 
-/** The one settings screen: status, choosing a photo, setting the wallpaper, and a preview of the transition. */
+/**
+ * The one settings screen: status, choosing a photo, setting the wallpaper, and a preview with the Detail slider and
+ * the transition. Choosing a photo and changing the detail only change the preview; Set as wallpaper applies it.
+ */
 @Composable
-fun MainScreen(state: MainUiState, onChoosePhoto: () -> Unit, onSetWallpaper: () -> Unit) {
+fun MainScreen(state: MainUiState, actions: MainActions) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
@@ -51,24 +57,18 @@ fun MainScreen(state: MainUiState, onChoosePhoto: () -> Unit, onSetWallpaper: ()
             Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
             StatusCard(state)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = onChoosePhoto, enabled = !state.busy) {
+                Button(onClick = actions.choosePhoto, enabled = state.work == null) {
                     Text(stringResource(R.string.action_choose_photo))
                 }
-                FilledTonalButton(
-                    onClick = onSetWallpaper,
-                    enabled = state.systemApp && state.preview != null && !state.busy,
-                ) {
+                FilledTonalButton(onClick = actions.setWallpaper, enabled = state.canSetWallpaper) {
                     Text(stringResource(R.string.action_set_wallpaper))
                 }
             }
-            if (state.busy) {
-                Text(stringResource(R.string.working))
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
+            if (state.work == Work.CHOOSING) Working(R.string.working_photo)
             state.error?.let { message ->
-                Text(stringResource(R.string.error_photo, message), color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.error_outline, message), color = MaterialTheme.colorScheme.error)
             }
-            state.preview?.let { Preview(it) }
+            state.preview?.let { Preview(it, state, actions) }
         }
     }
 }
@@ -84,19 +84,26 @@ private fun StatusCard(state: MainUiState) {
                 ),
             )
             Text(
-                when {
-                    state.litPercent != null -> stringResource(R.string.status_photo_ready, state.litPercent)
-                    state.preview == null -> stringResource(R.string.status_photo_missing)
-                    else -> ""
-                },
+                stringResource(
+                    when {
+                        state.preview == null -> R.string.status_photo_missing
+                        state.pending -> R.string.status_pending
+                        state.active -> R.string.status_active
+                        else -> R.string.status_not_set
+                    },
+                ),
             )
+            state.litPercent?.let { Text(stringResource(R.string.status_lit, it)) }
         }
     }
 }
 
-/** The wallpaper's own renderer, scaled into a phone-shaped box, with a slider for the transition's progress. */
+/**
+ * The wallpaper's own renderer, scaled into a phone-shaped box. Under it, the Detail slider (remakes the outline when
+ * let go), the line colour switch, and the transition's progress (drawing only).
+ */
 @Composable
-private fun Preview(renderer: OutlineRenderer) {
+private fun Preview(renderer: OutlineRenderer, state: MainUiState, actions: MainActions) {
     var progress by remember { mutableFloatStateOf(1f) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.preview_title), style = MaterialTheme.typography.titleMedium)
@@ -117,9 +124,61 @@ private fun Preview(renderer: OutlineRenderer) {
                     },
             )
         }
+
+        Text(stringResource(R.string.detail_title), style = MaterialTheme.typography.labelLarge)
+        Slider(
+            value = state.detail,
+            onValueChange = actions.changeDetail,
+            onValueChangeFinished = actions.chooseDetail,
+            enabled = state.work == null,
+            steps = DETAIL_SLIDER_STEPS,
+        )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(stringResource(R.string.detail_fewer), style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.detail_more), style = MaterialTheme.typography.bodySmall)
+        }
+        if (state.work == Work.DETAIL) Working(R.string.working_detail)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.line_color_title), style = MaterialTheme.typography.labelLarge)
+                Text(
+                    stringResource(
+                        when (state.lineColor) {
+                            LineColor.PHOTO -> R.string.line_color_photo
+                            LineColor.WHITE -> R.string.line_color_white
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(
+                checked = state.lineColor == LineColor.PHOTO,
+                onCheckedChange = { colored ->
+                    actions.changeLineColor(if (colored) LineColor.PHOTO else LineColor.WHITE)
+                },
+                enabled = state.work == null,
+            )
+        }
+
         Text(stringResource(R.string.preview_progress), style = MaterialTheme.typography.labelLarge)
         Slider(value = progress, onValueChange = { progress = it })
     }
 }
 
+@Composable
+private fun Working(label: Int) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(label))
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+    }
+}
+
 private const val PREVIEW_WIDTH = 0.6f
+
+// 19 stops between the ends: every 1/20, matching MainViewModel's snapping.
+private const val DETAIL_SLIDER_STEPS = 19

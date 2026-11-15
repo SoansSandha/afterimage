@@ -7,14 +7,25 @@
     <string name="status_title">Status</string>
     <string name="status_system_app_ok">Installed as a system app: allowed on the always-on display</string>
     <string name="status_system_app_missing">Not a system app yet. Install the Afterimage Magisk module and reboot.</string>
-    <string name="status_photo_ready">Outline ready: %1$d%% of the screen lit</string>
     <string name="status_photo_missing">No photo chosen yet</string>
+    <string name="status_pending">Preview not applied yet: tap Set as wallpaper to use it</string>
+    <string name="status_active">Afterimage is your lock screen wallpaper</string>
+    <string name="status_not_set">Afterimage isn\'t on your lock screen yet: tap Set as wallpaper</string>
+    <string name="status_lit">The outline lights %1$d%% of the screen</string>
 
     <string name="action_choose_photo">Choose photo</string>
     <string name="action_set_wallpaper">Set as wallpaper</string>
-    <string name="working">Finding the outline…</string>
+    <string name="working_photo">Finding the outline…</string>
+    <string name="working_detail">Updating the outline…</string>
     <string name="preview_title">Preview</string>
+    <string name="detail_title">Detail</string>
+    <string name="detail_fewer">Fewer lines</string>
+    <string name="detail_more">More lines</string>
+    <string name="line_color_title">Coloured lines</string>
+    <string name="line_color_photo">Lines take the photo\'s colours</string>
+    <string name="line_color_white">White lines</string>
     <string name="preview_progress">Photo ↔ outline</string>
-    <string name="error_photo">Couldn\'t use that photo: %1$s</string>
+    <string name="wallpaper_updated">Wallpaper updated</string>
+    <string name="error_outline">That didn\'t work: %1$s</string>
     <string name="error_no_picker">No live-wallpaper picker found</string>
 </resources>

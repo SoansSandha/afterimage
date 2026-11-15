@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.soanssandha.afterimage.ui.MainActions
 import io.github.soanssandha.afterimage.ui.MainScreen
 import io.github.soanssandha.afterimage.ui.MainViewModel
 import io.github.soanssandha.afterimage.ui.theme.AfterimageTheme
@@ -34,13 +35,28 @@ class MainActivity : ComponentActivity() {
         setContent {
             AfterimageTheme {
                 val state by viewModel.state.collectAsStateWithLifecycle()
-                MainScreen(
-                    state = state,
-                    onChoosePhoto = {
-                        pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    },
-                    onSetWallpaper = ::openWallpaperPicker,
-                )
+                MainScreen(state = state, actions = actions)
+            }
+        }
+    }
+
+    private val actions = MainActions(
+        choosePhoto = {
+            pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        },
+        setWallpaper = ::setWallpaper,
+        changeDetail = { viewModel.onDetailChange(it) },
+        chooseDetail = { viewModel.onDetailChosen() },
+        changeLineColor = { viewModel.onLineColorChange(it) },
+    )
+
+    /** Applies the preview. If Afterimage isn't the wallpaper yet, the system picker then sets it; else it's done. */
+    private fun setWallpaper() {
+        viewModel.setWallpaper { needsPicker ->
+            if (needsPicker) {
+                openWallpaperPicker()
+            } else {
+                Toast.makeText(this, R.string.wallpaper_updated, Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RuntimeShader
 import android.graphics.Shader
 import io.github.soanssandha.afterimage.core.burnin.Offset
+import io.github.soanssandha.afterimage.core.config.LineColor
 import io.github.soanssandha.afterimage.core.outline.OutlineStyle
 import io.github.soanssandha.afterimage.core.outline.PackedField
 import java.nio.ByteBuffer
@@ -19,7 +20,12 @@ import java.nio.ByteBuffer
  *
  * The shading formula matches `core.outline.OutlineShading`, which the tests and the outline lab use.
  */
-class OutlineRenderer(photo: Bitmap, field: PackedField, style: OutlineStyle = STYLE) {
+class OutlineRenderer(
+    photo: Bitmap,
+    field: PackedField,
+    lineColor: LineColor = LineColor.PHOTO,
+    style: OutlineStyle = STYLE,
+) {
 
     /** The photo's size: the frame size this renderer draws at, in its own pixels. */
     val width: Int = photo.width
@@ -44,6 +50,13 @@ class OutlineRenderer(photo: Bitmap, field: PackedField, style: OutlineStyle = S
         shader.setFloatUniform("glowRadius", style.glowRadius)
         shader.setFloatUniform("glowStrength", style.glowStrength)
         shader.setFloatUniform("lineBrightness", 1f)
+        shader.setFloatUniform(
+            "colorAmount",
+            when (lineColor) {
+                LineColor.PHOTO -> 1f
+                LineColor.WHITE -> 0f
+            },
+        )
         paint.shader = shader
     }
 
@@ -99,6 +112,7 @@ class OutlineRenderer(photo: Bitmap, field: PackedField, style: OutlineStyle = S
             uniform float glowRadius;      // glow fall-off, frame pixels
             uniform float glowStrength;    // glow brightness at the line
             uniform float lineBrightness;  // overall line brightness
+            uniform float colorAmount;     // 1: lines in the photo's colours; 0: white lines
 
             half4 main(float2 p) {
                 half3 photoColor = photo.eval(p).rgb;
@@ -110,6 +124,7 @@ class OutlineRenderer(photo: Bitmap, field: PackedField, style: OutlineStyle = S
                 // Lines take the photo's own colour there, scaled up to full brightness.
                 half3 tint = photo.eval(source).rgb;
                 tint = tint / max(max(max(tint.r, tint.g), tint.b), 0.004);
+                tint = mix(half3(1.0), tint, half(colorAmount));
                 half t = half(progress);
                 return half4(photoColor * (1.0 - t) + tint * half(line) * t, 1.0);
             }

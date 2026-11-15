@@ -10,50 +10,68 @@ import android.util.Size
 import android.view.WindowManager
 import io.github.soanssandha.afterimage.core.outline.FieldCodec
 import io.github.soanssandha.afterimage.core.outline.GrayImage
-import io.github.soanssandha.afterimage.core.outline.OutlinePipeline
+import io.github.soanssandha.afterimage.core.outline.OutlineSource
 import io.github.soanssandha.afterimage.core.outline.OutlineStyle
+import io.github.soanssandha.afterimage.core.outline.PackedField
 import io.github.soanssandha.afterimage.render.OutlineRenderer
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * Turns a picked photo into what the wallpaper draws (docs/plan.md §5.3): the photo cropped to the screen, and its
- * outline computed at [WORKING_LONG_SIDE] and packed into a distance field. Blocking and CPU-heavy: run it off the
- * main thread.
+ * Turns a picked photo into what the wallpaper draws (docs/plan.md §5.3), in two steps: [prepare] crops it to the
+ * screen and does the slow half of the outline once, at [WORKING_LONG_SIDE]; [outline] finishes it for one detail
+ * level and packs it into a distance field. Blocking and CPU-heavy: run it off the main thread.
  */
-class OutlineMaker(private val context: Context, private val store: WallpaperStore = WallpaperStore(context)) {
+class OutlineMaker(private val context: Context) {
 
-    /** How much of the screen the new outline lights (0..1), and how long making it took. */
-    class Result(val litFraction: Float, val millis: Long)
+    /** A photo cropped to the screen, ready to be outlined at any detail level. */
+    class Prepared(val photo: Bitmap, val source: OutlineSource)
 
-    fun make(uri: Uri): Result {
-        val started = SystemClock.elapsedRealtime()
+    /** An outline at one detail level, and how much of the screen it lights (0..1). */
+    class Made(val field: PackedField, val litFraction: Float)
+
+    /** Decodes the photo at [uri], crops it to the screen and prepares it. */
+    fun prepare(uri: Uri): Prepared {
         val screen = portraitScreenSize()
-        val photo = centerCrop(decodeCovering(uri, screen), screen)
+        return prepare(centerCrop(decodeCovering(uri, screen), screen))
+    }
+
+    /** Prepares a photo that's already cropped to the screen, such as one loaded back from [WallpaperStore]. */
+    fun prepare(photo: Bitmap): Prepared {
+        val started = SystemClock.elapsedRealtime()
         val working = scaleToLongSide(photo, WORKING_LONG_SIDE)
         val pixels = IntArray(working.width * working.height)
         working.getPixels(pixels, 0, working.width, 0, 0, working.width, working.height)
-        val field = OutlinePipeline.run(GrayImage.fromArgb(working.width, working.height, pixels))
-        val decoded = SystemClock.elapsedRealtime()
-        store.save(photo, FieldCodec.pack(field))
+        val source = OutlineSource.of(GrayImage.fromArgb(working.width, working.height, pixels))
+        Log.i(
+            TAG,
+            "Photo prepared: ${photo.width}x${photo.height}, field ${working.width}x${working.height}, " +
+                "${SystemClock.elapsedRealtime() - started} ms",
+        )
+        return Prepared(photo, source)
+    }
+
+    fun outline(prepared: Prepared, detail: Float): Made {
+        val started = SystemClock.elapsedRealtime()
+        val field = prepared.source.outline(detail)
+        val packed = FieldCodec.pack(field)
 
         // The renderer's style is in screen pixels; the field is in working pixels.
-        val toWorking = working.width.toFloat() / photo.width
+        val toWorking = field.width.toFloat() / prepared.photo.width
         val screenStyle = OutlineRenderer.STYLE
         val workingStyle = OutlineStyle(
             halfWidth = screenStyle.halfWidth * toWorking,
             glowRadius = screenStyle.glowRadius * toWorking,
             glowStrength = screenStyle.glowStrength,
         )
-        val result = Result(field.litFraction(workingStyle), SystemClock.elapsedRealtime() - started)
+        val lit = field.litFraction(workingStyle)
         Log.i(
             TAG,
-            "Outline made: photo ${photo.width}x${photo.height}, field ${working.width}x${working.height}, " +
-                "${field.lines.count()} line px, lit ${"%.1f".format(result.litFraction * 100)} %, " +
-                "outline ${decoded - started} ms, total ${result.millis} ms",
+            "Outline made: detail ${"%.2f".format(detail)}, ${field.lines.count()} line px, " +
+                "lit ${"%.1f".format(lit * 100)} %, ${SystemClock.elapsedRealtime() - started} ms",
         )
-        return result
+        return Made(packed, lit)
     }
 
     /** The display's full size, portrait. The wallpaper surface is this size on a phone. */

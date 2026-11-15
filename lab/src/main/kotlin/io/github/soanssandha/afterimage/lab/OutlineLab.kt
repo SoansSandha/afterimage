@@ -5,6 +5,7 @@ import io.github.soanssandha.afterimage.core.outline.DistanceTransform
 import io.github.soanssandha.afterimage.core.outline.EdgeDetector
 import io.github.soanssandha.afterimage.core.outline.EdgeMask
 import io.github.soanssandha.afterimage.core.outline.GrayImage
+import io.github.soanssandha.afterimage.core.outline.OutlineDetail
 import io.github.soanssandha.afterimage.core.outline.OutlineShading
 import io.github.soanssandha.afterimage.core.outline.OutlineStyle
 import java.awt.RenderingHints
@@ -25,11 +26,13 @@ Usage: ./gradlew :lab:run --args="<photo> [options]"
   --long-side <px>        working size the outline is computed at, as on the phone (default 1536)
   --screen-long-side <px> size the previews are drawn at; the 9 Pro XL panel is 2992 (default)
   --detector <name>       canny, xdog or both (default both)
+  --detail <0..1>         the app's Detail slider: sets --canny-high, --canny-min and --min-component together
+                          (default 0.5; 0 = fewer lines, 1 = more; OutlineDetail)
   --half-width <px>       line core half-width in screen px (default 1.0)
   --glow-radius <px>      glow fall-off in screen px (default 4.0)
   --glow-strength <0..1>  glow brightness at the line (default 0.35)
-  --min-component <px>    drop line groups smaller than this, in working px (default 24)
-  --canny-sigma, --canny-high, --canny-low, --canny-min    Canny settings (EdgeDetector.Canny)
+  --min-component <px>    drop line groups smaller than this, in working px (default 24, or from --detail)
+  --canny-sigma, --canny-high, --canny-low, --canny-min    Canny settings (EdgeDetector.Canny; override --detail)
   --xdog-sigma, --xdog-k, --xdog-tau, --xdog-epsilon        XDoG settings (EdgeDetector.Xdog)
 
 Writes <name>-<detector>-lines.png (raw lines, working size), -aod.png (the outline as the AOD frame would draw it,
@@ -114,12 +117,17 @@ private class LabOptions(
             fun float(key: String, default: Float) = values[key]?.toFloat() ?: default
             fun int(key: String, default: Int) = values[key]?.toInt() ?: default
 
+            // --detail sets the app's thresholds; --canny-* and --min-component still override them one by one.
+            val detail = float("detail", OutlineDetail.DEFAULT)
+            require(detail in OutlineDetail.MIN..OutlineDetail.MAX) { "--detail must be within 0..1, was $detail" }
+            val detailCanny = OutlineDetail.canny(detail)
             val canny = EdgeDetector.Canny(
-                sigma = float("canny-sigma", 1.4f),
-                highPercentile = float("canny-high", 0.85f),
-                lowRatio = float("canny-low", 0.4f),
-                minMagnitude = float("canny-min", 0.25f),
+                sigma = float("canny-sigma", detailCanny.sigma),
+                highPercentile = float("canny-high", detailCanny.highPercentile),
+                lowRatio = float("canny-low", detailCanny.lowRatio),
+                minMagnitude = float("canny-min", detailCanny.minMagnitude),
             )
+            val cannyName = if ("detail" in values) "canny-d$detail" else "canny"
             val xdog = EdgeDetector.Xdog(
                 sigma = float("xdog-sigma", 1.0f),
                 k = float("xdog-k", 1.6f),
@@ -127,9 +135,9 @@ private class LabOptions(
                 epsilon = float("xdog-epsilon", -0.01f),
             )
             val detectors = when (val name = values["detector"] ?: "both") {
-                "canny" -> listOf("canny" to canny)
+                "canny" -> listOf(cannyName to canny)
                 "xdog" -> listOf("xdog" to xdog)
-                "both" -> listOf("canny" to canny, "xdog" to xdog)
+                "both" -> listOf(cannyName to canny, "xdog" to xdog)
                 else -> throw IllegalArgumentException("Unknown detector '$name': use canny, xdog or both")
             }
             val unknown = values.keys - KNOWN
@@ -145,12 +153,12 @@ private class LabOptions(
                     glowRadius = float("glow-radius", 4.0f),
                     glowStrength = float("glow-strength", 0.35f),
                 ),
-                minComponent = int("min-component", 24),
+                minComponent = int("min-component", OutlineDetail.minComponentPixels(detail)),
             )
         }
 
         private val KNOWN = setOf(
-            "out", "long-side", "screen-long-side", "detector", "half-width", "glow-radius", "glow-strength",
+            "out", "long-side", "screen-long-side", "detector", "detail", "half-width", "glow-radius", "glow-strength",
             "min-component", "canny-sigma", "canny-high", "canny-low", "canny-min", "xdog-sigma", "xdog-k",
             "xdog-tau", "xdog-epsilon",
         )
