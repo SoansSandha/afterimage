@@ -4,16 +4,18 @@
 #
 # Usage: scripts/package-module.sh --overlay <overlay.apk> [--app <app.apk>] [--version <x.y.z>] [--out <zip>]
 #   --overlay  the :overlay APK, e.g. overlay/build/outputs/apk/debug/overlay-debug.apk
-#   --app      the :app APK, from Phase 1; mounted as a system app (/system/app/Afterimage)
+#   --app      the :app APK; mounted as a system app (/system/app/Afterimage), which gets AMBIENT_WALLPAPER
 #   --version  defaults to `afterimage` in gradle/libs.versions.toml
 #   --out      defaults to build/outputs/magisk/afterimage-v<version>.zip
 #
-# Dev loop (Phase 0b):
-#   ./gradlew :overlay:assembleDebug
-#   bash scripts/package-module.sh --overlay overlay/build/outputs/apk/debug/overlay-debug.apk
+# Dev loop:
+#   ./gradlew :overlay:assembleDebug :app:assembleDebug
+#   bash scripts/package-module.sh --overlay overlay/build/outputs/apk/debug/overlay-debug.apk \
+#     --app app/build/outputs/apk/debug/app-debug.apk
+# After the first install, update just the app with scripts/dev-install.sh (no reboot).
 #
-# The scripts are copied with Windows line endings stripped, module.prop gets the version, and the overlay
-# APK is checked with aapt2 (build-tools 36.0.0) when it's available. The zip needs no META-INF installer:
+# The scripts are copied with Windows line endings stripped, module.prop gets the version, and both APKs
+# are checked with aapt2 (build-tools 36.0.0) when it's available. The zip needs no META-INF installer:
 # the Magisk app installs modules itself.
 set -euo pipefail
 
@@ -27,7 +29,7 @@ while [ $# -gt 0 ]; do
     --app) app="${2:?--app needs a path}"; shift 2 ;;
     --version) version="${2:?--version needs a value}"; shift 2 ;;
     --out) out="${2:?--out needs a path}"; shift 2 ;;
-    -h | --help) sed -n '2,18p' "$0"; exit 0 ;;
+    -h | --help) sed -n '2,19p' "$0"; exit 0 ;;
     *) echo "Unknown argument: $1 (see --help)" >&2; exit 2 ;;
   esac
 done
@@ -57,6 +59,12 @@ if [ -x "$aapt2" ]; then
   grep -qE 'isStatic\([^)]*\)=true' <<<"$manifest" || fail "$overlay isn't a static overlay"
   "$aapt2" dump resources "$overlay" | grep -A1 'bool/config_dozeSupportsAodWallpaper' | grep -q 'true' \
     || fail "$overlay doesn't set bool/config_dozeSupportsAodWallpaper to true"
+  if [ -n "$app" ]; then
+    package="$("$aapt2" dump packagename "$app" 2>&1 | tr -d '\r')" || fail "$app isn't a readable APK: $package"
+    [ "$package" = io.github.soanssandha.afterimage ] || fail "$app is $package, not Afterimage"
+    "$aapt2" dump permissions "$app" | grep -q "uses-permission: name='android.permission.AMBIENT_WALLPAPER'" \
+      || fail "$app doesn't request AMBIENT_WALLPAPER"
+  fi
 else
   echo "package-module: aapt2 not found under $sdk/build-tools/36.0.0; overlay not checked" >&2
 fi

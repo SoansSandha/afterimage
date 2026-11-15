@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- supportsAmbientMode keeps the wallpaper visible on the always-on display and makes system_server send
+     onAmbientModeChanged. It's a @SystemApi attribute: public in the SDK's resource table, but missing from R.java. -->
+<wallpaper xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/wallpaper_description"
+    android:settingsActivity="io.github.soanssandha.afterimage.MainActivity"
+    android:supportsAmbientMode="true" />

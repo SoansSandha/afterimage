@@ -8,4 +8,10 @@ Each release's section becomes the notes of its GitHub Release, so write entries
 
 ### Added
 
-- A Magisk module that keeps the lock-screen wallpaper visible on the always-on display, using the path Android already has for it (a framework overlay plus a Secure setting). Magisk's action button turns it off and on; removing the module puts the setting back. No outline yet: this build is for testing how Google's own wallpaper-on-AOD looks and what it costs in battery.
+- The Afterimage wallpaper: choose a photo in the Afterimage app and set it as your wallpaper. When the phone locks into the always-on display, the photo fades into a glowing outline of itself, in the photo's own colours, and fades back when you wake the phone. The outline moves a few pixels each time to protect the screen. Photos stay on the phone: the app has no internet access.
+- A Detail slider in the app, from fewer lines (only the strongest edges) to more lines (soft and fine edges too), and a Coloured lines switch: lines in the photo's colours, or white. Choosing a photo, the detail or the line colour only changes the preview; your wallpaper changes when you tap Set as wallpaper.
+- A Magisk module that installs the app as a system app (Android only lets those draw on the always-on display) and turns on the path Android already has for showing the wallpaper there. Magisk's action button turns the wallpaper on the always-on display off and on; removing the module puts everything back.
+
+### Known issues
+
+- Android still blurs and dims the wallpaper on the always-on display, so the outline is softer and darker than intended. Removing that is the next step.

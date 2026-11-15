@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A solid disc and the outline it leaves behind, offset: the photo and its afterimage. Inside the 66 dp safe zone
+     of the 108 dp icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M48,52m-14,0a14,14 0,1 1,28 0a14,14 0,1 1,-28 0" />
+    <path
+        android:strokeWidth="3"
+        android:strokeColor="#FFFFFFFF"
+        android:pathData="M60,58m-14,0a14,14 0,1 1,28 0a14,14 0,1 1,-28 0" />
+</vector>

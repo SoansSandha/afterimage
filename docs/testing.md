@@ -7,17 +7,20 @@ How Afterimage is checked: automatically on every change, and by hand on a phone
 ## Automated
 
 - `./gradlew check`: formatting, lint, unit tests and the coverage gate.
-- CI (`.github/workflows/build.yml`) also builds the overlay and packages the Magisk module, which checks the overlay with `aapt2` and the zip's layout.
+- CI (`.github/workflows/build.yml`) also builds the app (R8-shrunk) and the overlay and packages the Magisk module, which checks both APKs with `aapt2` and the zip's layout.
 
 ## The Magisk module
 
 ### Build
 
 ```bash
-./gradlew :overlay:assembleDebug
-bash scripts/package-module.sh --overlay overlay/build/outputs/apk/debug/overlay-debug.apk
+./gradlew :overlay:assembleDebug :app:assembleDebug
+bash scripts/package-module.sh --overlay overlay/build/outputs/apk/debug/overlay-debug.apk \
+  --app app/build/outputs/apk/debug/app-debug.apk
 # → build/outputs/magisk/afterimage-v<version>.zip
 ```
+
+Build the module from a debug app on the PC that will run `scripts/dev-install.sh`: later updates must be signed with the same key.
 
 ### Install, remove, recover
 
@@ -36,6 +39,7 @@ What the module changes, and where it keeps state:
 
 | Change | Undone by |
 |---|---|
+| The Afterimage app at `/system/app/Afterimage`, which makes it a preinstalled app that gets `AMBIENT_WALLPAPER` | Disabling or removing the module, then rebooting. An update installed over it with `dev-install.sh` then becomes a normal app, its wallpaper service switches itself off, and Android falls back to the default wallpaper |
 | Static overlay `io.github.soanssandha.afterimage.overlay.aodgate` on `/product/overlay`: `config_dozeSupportsAodWallpaper=true` | Disabling or removing the module, then rebooting |
 | Secure `doze_always_on_wallpaper_enabled=1`, set once on the first boot | The action button (off), or removing the module (restored) |
 | `/data/adb/afterimage/`: the setting's previous value and a marker that the gate was opened | Removing the module |
@@ -63,6 +67,25 @@ Goal: see how Google's own wallpaper-on-AOD looks and costs on this phone before
 Then the battery run below, with the gate open and the usual wallpaper.
 
 Exit: the owner decides whether a lit AOD wallpaper is worth it, for looks and battery. Record the decision in ADR 0002 (Accepted, or switch to route 2).
+
+## Phase 1: the outline wallpaper on the phone
+
+Install the module built with the app (above), replacing the Phase 0b one, and reboot. Then:
+
+| # | Check | How | What to record |
+|---|---|---|---|
+| 1 | System app | `adb shell dumpsys package io.github.soanssandha.afterimage \| grep -E 'codePath\|AMBIENT_WALLPAPER'` | `codePath=/system/app/Afterimage` and `AMBIENT_WALLPAPER: granted=true`. The app's status card says "Installed as a system app" |
+| 2 | Make an outline | Open Afterimage › Choose photo › pick one. Watch `adb logcat -s Afterimage` | "Photo prepared: … ms" and "Outline made: …" with the lit share and time (budget: lit ≤ 15 %, ≤ 1.5 s together). The status says the preview isn't applied, and the wallpaper hasn't changed |
+| 3 | Preview | Drag the Photo ↔ outline slider | Photo → outline looks right; lines follow the photo's colours |
+| 4 | Detail and line colour | Drag Detail to each end and let go; flip Coloured lines off and on | Fewer lines keeps only strong edges; more lines adds soft ones. Each change logs "Outline made" without a new "Photo prepared" (well under a second). The switch turns the lines white and back at once. The wallpaper still hasn't changed |
+| 5 | Set it (open question 6) | Set as wallpaper › Pixel's preview › Set wallpaper | Which destinations it offers: is "Lock screen" alone one of them? Once Afterimage is on the lock screen, Set as wallpaper applies a new preview directly ("Wallpaper updated"), without the picker |
+| 6 | Lock from the lock screen | `KEYCODE_SLEEP` from the lock screen, watching the phone and `adb logcat -s Afterimage` | The photo fades to the outline. Log: `onAmbientModeChanged` time and duration, display state changes, "Settled … frames in … ms" (open question 5: does the transition finish before the display state turns `DOZE`?) |
+| 7 | AOD frame | `adb exec-out screencap -p` while on AOD (see below) | Outline visible, dimmed by the 0.4 scrim and blurred by SystemUI (Phase 2 removes both) |
+| 8 | Lock from an app, wake, fingerprint | As in Phase 0b | Black for ~1 s from an app, then the outline; on wake the outline fades back to the photo |
+| 9 | Burn-in shift | Lock several times; compare AOD frames | The outline moves a few pixels each time |
+| 10 | Battery | The battery run below, with Afterimage as the lock wallpaper | mAh/h on AOD against the baseline |
+
+Iterate on app code with `bash scripts/dev-install.sh`: it installs over the system copy, keeping the permission, with no reboot. Reopen the app afterwards so it re-enables the wallpaper service if needed.
 
 ## Measuring an AOD frame
 

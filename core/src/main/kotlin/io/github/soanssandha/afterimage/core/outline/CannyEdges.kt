@@ -3,15 +3,23 @@ package io.github.soanssandha.afterimage.core.outline
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-/** The Canny steps behind [EdgeDetector.Canny]: blur, Sobel gradients, non-maximum suppression, hysteresis. */
+/**
+ * The Canny steps behind [EdgeDetector.Canny], in two halves: [gradients] (blur, Sobel, non-maximum suppression) is
+ * slow and doesn't depend on the thresholds; [threshold] (percentile, floor, hysteresis) is fast and does. Keeping the
+ * first half lets [OutlineSource] redraw the lines at another detail level without starting over.
+ */
 internal object CannyEdges {
 
     // tan(22.5°) and tan(67.5°): the borders between horizontal, diagonal and vertical gradient directions.
     private const val TAN_22_5 = 0.41421357f
     private const val TAN_67_5 = 2.4142137f
 
-    fun detect(image: GrayImage, params: EdgeDetector.Canny): EdgeMask {
-        val blurred = GaussianBlur.blur(image, params.sigma)
+    fun detect(image: GrayImage, params: EdgeDetector.Canny): EdgeMask =
+        threshold(gradients(image, params.sigma), params)
+
+    /** The thinned gradient magnitudes of [image] blurred by [sigma] px. */
+    fun gradients(image: GrayImage, sigma: Float): CannyGradients {
+        val blurred = GaussianBlur.blur(image, sigma)
         val w = image.width
         val h = image.height
         val gx = FloatArray(w * h)
@@ -37,13 +45,26 @@ internal object CannyEdges {
         val thinned = suppressNonMaxima(w, h, gx, gy, magnitude)
         // Copied into a primitive array: a List<Float> would box a few hundred thousand values per photo.
         val candidates = FloatArray(thinned.count { it > 0f })
-        if (candidates.isEmpty()) return EdgeMask(w, h)
         var next = 0
         for (m in thinned) if (m > 0f) candidates[next++] = m
         candidates.sort()
+        return CannyGradients(w, h, thinned, candidates)
+    }
+
+    /** The lines in [gradients] for [params]' thresholds; [params]' sigma is the caller's to match. */
+    fun threshold(gradients: CannyGradients, params: EdgeDetector.Canny): EdgeMask {
+        val candidates = gradients.sortedCandidates
+        if (candidates.isEmpty()) return EdgeMask(gradients.width, gradients.height)
         val percentile = candidates[(params.highPercentile * (candidates.size - 1)).toInt()]
         val high = maxOf(percentile, params.minMagnitude)
-        return hysteresis(w, h, thinned, high = high, low = high * params.lowRatio)
+        return hysteresis(
+            gradients.width,
+            gradients.height,
+            gradients.thinned,
+            high = high,
+            low =
+            high * params.lowRatio,
+        )
     }
 
     /** Keeps each gradient only where it peaks across the edge, so lines come out one pixel wide. */
